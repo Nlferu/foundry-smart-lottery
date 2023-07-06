@@ -34,11 +34,7 @@ import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/inter
  */
 contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
     /* Errors */
-    error Raffle__UpkeepNotNeeded(
-        uint256 currentBalance,
-        uint256 numPlayers,
-        uint256 raffleState
-    );
+    error Raffle__UpkeepNotNeeded(uint256 currentBalance, uint256 numPlayers, uint256 raffleState);
     error Raffle__TransferFailed();
     error Raffle__SendMoreToEnterRaffle();
     error Raffle__RaffleNotOpen();
@@ -49,7 +45,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
         CALCULATING
     }
     /* State variables */
-    // Chainlink VRF Variables
+    // Chainlink VRF Variabless
     VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
     uint64 private immutable i_subscriptionId;
     bytes32 private immutable i_gasLane;
@@ -113,20 +109,13 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
      * 3. The contract has ETH.
      * 4. Implicity, your subscription is funded with LINK.
      */
-    function checkUpkeep(
-        bytes memory /* checkData */
-    )
-        public
-        view
-        override
-        returns (bool upkeepNeeded, bytes memory /* performData */)
-    {
+    function checkUpkeep(bytes memory /* checkData */) public view override returns (bool upkeepNeeded, bytes memory /* performData */) {
         bool isOpen = RaffleState.OPEN == s_raffleState;
         bool timePassed = ((block.timestamp - s_lastTimeStamp) > i_interval);
         bool hasPlayers = s_players.length > 0;
         bool hasBalance = address(this).balance > 0;
         upkeepNeeded = (timePassed && isOpen && hasBalance && hasPlayers);
-        return (upkeepNeeded, "0x0"); // can we comment this out?
+        return (upkeepNeeded, "0x0");
     }
 
     /**
@@ -137,20 +126,10 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
         (bool upkeepNeeded, ) = checkUpkeep("");
         // require(upkeepNeeded, "Upkeep not needed");
         if (!upkeepNeeded) {
-            revert Raffle__UpkeepNotNeeded(
-                address(this).balance,
-                s_players.length,
-                uint256(s_raffleState)
-            );
+            revert Raffle__UpkeepNotNeeded(address(this).balance, s_players.length, uint256(s_raffleState));
         }
         s_raffleState = RaffleState.CALCULATING;
-        uint256 requestId = i_vrfCoordinator.requestRandomWords(
-            i_gasLane,
-            i_subscriptionId,
-            REQUEST_CONFIRMATIONS,
-            i_callbackGasLimit,
-            NUM_WORDS
-        );
+        uint256 requestId = i_vrfCoordinator.requestRandomWords(i_gasLane, i_subscriptionId, REQUEST_CONFIRMATIONS, i_callbackGasLimit, NUM_WORDS);
         // Quiz... is this redundant?
         emit RequestedRaffleWinner(requestId);
     }
@@ -159,10 +138,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
      * @dev This is the function that Chainlink VRF node
      * calls to send the money to the random winner.
      */
-    function fulfillRandomWords(
-        uint256 /* requestId */,
-        uint256[] memory randomWords
-    ) internal override {
+    function fulfillRandomWords(uint256 /* requestId */, uint256[] memory randomWords) internal override {
         // s_players size 10
         // randomNumber 202
         // 202 % 10 ? what's doesn't divide evenly into 202?

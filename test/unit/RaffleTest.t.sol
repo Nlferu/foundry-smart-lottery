@@ -167,14 +167,7 @@ contract RaffleTest is StdCheats, Test {
         uint256 numPlayers = 0;
         Raffle.RaffleState rState = raffle.getRaffleState();
         // Act / Assert
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Raffle.Raffle__UpkeepNotNeeded.selector,
-                currentBalance,
-                numPlayers,
-                rState
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(Raffle.Raffle__UpkeepNotNeeded.selector, currentBalance, numPlayers, rState));
         raffle.performUpkeep("");
     }
 
@@ -217,44 +210,26 @@ contract RaffleTest is StdCheats, Test {
         _;
     }
 
-    function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep()
-        public
-        raffleEntered
-        skipFork
-    {
+    function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep() public raffleEntered skipFork {
         // Arrange
         // Act / Assert
         vm.expectRevert("nonexistent request");
         // vm.mockCall could be used here...
-        VRFCoordinatorV2Mock(vrfCoordinatorV2).fulfillRandomWords(
-            0,
-            address(raffle)
-        );
+        VRFCoordinatorV2Mock(vrfCoordinatorV2).fulfillRandomWords(0, address(raffle));
 
         vm.expectRevert("nonexistent request");
 
-        VRFCoordinatorV2Mock(vrfCoordinatorV2).fulfillRandomWords(
-            1,
-            address(raffle)
-        );
+        VRFCoordinatorV2Mock(vrfCoordinatorV2).fulfillRandomWords(1, address(raffle));
     }
 
-    function testFulfillRandomWordsPicksAWinnerResetsAndSendsMoney()
-        public
-        raffleEntered
-        skipFork
-    {
+    function testFulfillRandomWordsPicksAWinnerResetsAndSendsMoney() public raffleEntered skipFork {
         address expectedWinner = address(1);
 
         // Arrange
         uint256 additionalEntrances = 3;
         uint256 startingIndex = 1; // We have starting index be 1 so we can start with address(1) and not address(0)
 
-        for (
-            uint256 i = startingIndex;
-            i < startingIndex + additionalEntrances;
-            i++
-        ) {
+        for (uint256 i = startingIndex; i < startingIndex + additionalEntrances; i++) {
             address player = address(uint160(i));
             hoax(player, 1 ether); // deal 1 eth to the player
             raffle.enterRaffle{value: raffleEntranceFee}();
@@ -269,10 +244,7 @@ contract RaffleTest is StdCheats, Test {
         Vm.Log[] memory entries = vm.getRecordedLogs();
         bytes32 requestId = entries[1].topics[1]; // get the requestId from the logs
 
-        VRFCoordinatorV2Mock(vrfCoordinatorV2).fulfillRandomWords(
-            uint256(requestId),
-            address(raffle)
-        );
+        VRFCoordinatorV2Mock(vrfCoordinatorV2).fulfillRandomWords(uint256(requestId), address(raffle));
 
         // Assert
         address recentWinner = raffle.getRecentWinner();
