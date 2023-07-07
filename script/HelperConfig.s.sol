@@ -68,7 +68,6 @@ contract HelperConfig is Script {
 
         vm.startBroadcast(DEFAULT_ANVIL_PRIVATE_KEY);
         VRFCoordinatorV2Mock vrfCoordinatorV2Mock = new VRFCoordinatorV2Mock(baseFee, gasPriceLink);
-
         LinkToken link = new LinkToken();
         vm.stopBroadcast();
 

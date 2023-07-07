@@ -10,6 +10,7 @@ contract DeployRaffle is Script {
     function run() external returns (Raffle, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig(); // This comes with our mocks!
         AddConsumer addConsumer = new AddConsumer();
+
         (
             uint64 subscriptionId,
             bytes32 gasLane,

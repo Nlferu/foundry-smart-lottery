@@ -14,7 +14,7 @@ import {CreateSubscription} from "../../script/Interactions.s.sol";
 contract RaffleTest is StdCheats, Test {
     /* Errors */
     event RequestedRaffleWinner(uint256 indexed requestId);
-    event RaffleEnter(address indexed player);
+    event RaffleEnter(address indexed player, uint256 indexed fee);
     event WinnerPicked(address indexed player);
 
     Raffle public raffle;
@@ -33,7 +33,7 @@ contract RaffleTest is StdCheats, Test {
     function setUp() external {
         DeployRaffle deployer = new DeployRaffle();
         (raffle, helperConfig) = deployer.run();
-        vm.deal(PLAYER, STARTING_USER_BALANCE);
+        deal(PLAYER, STARTING_USER_BALANCE);
 
         (
             ,
@@ -49,6 +49,7 @@ contract RaffleTest is StdCheats, Test {
     }
 
     function testRaffleInitializesInOpenState() public view {
+        /// @dev Since "RaffleState" is enum (type) we can see it even if it's private and call it like below:
         assert(raffle.getRaffleState() == Raffle.RaffleState.OPEN);
     }
 
@@ -60,6 +61,7 @@ contract RaffleTest is StdCheats, Test {
         // Arrange
         vm.prank(PLAYER);
         // Act / Assert
+        /// @dev Since "Error's" are also states like enum (type) we can call it as below:
         vm.expectRevert(Raffle.Raffle__SendMoreToEnterRaffle.selector);
         raffle.enterRaffle();
     }
@@ -79,8 +81,10 @@ contract RaffleTest is StdCheats, Test {
         vm.prank(PLAYER);
 
         // Act / Assert
-        vm.expectEmit(true, false, false, false, address(raffle));
-        emit RaffleEnter(PLAYER);
+        /// @dev 1st = indexed param(check), 2nd = indexed param(check), 3rd = indexed param(check) (contracts allow only 3 indexed params)
+        // 4th = checkData bool(check non-indexed params)
+        vm.expectEmit(true, true, false, true);
+        emit RaffleEnter(PLAYER, raffleEntranceFee);
         raffle.enterRaffle{value: raffleEntranceFee}();
     }
 
@@ -88,7 +92,9 @@ contract RaffleTest is StdCheats, Test {
         // Arrange
         vm.prank(PLAYER);
         raffle.enterRaffle{value: raffleEntranceFee}();
+        /// @dev "vm.warp" sets `block.timestamp`
         vm.warp(block.timestamp + automationUpdateInterval + 1);
+        /// @dev "vm.roll" sets `block.number`
         vm.roll(block.number + 1);
         raffle.performUpkeep("");
 

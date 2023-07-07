@@ -5,7 +5,7 @@ libs = ["lib"]
 remappings = ['@chainlink/contracts/=lib/chainlink-brownie-contracts/contracts/', '@solmate=lib/solmate/src/']
 
 [etherscan]
-mainnet = { key = "${ETHERSCAN_API_KEY}" }
+mainnet = {key = "${ETHERSCAN_API_KEY}"}
 sepolia = {key = "${ETHERSCAN_API_KEY}"}
 
 [rpc_endpoints]

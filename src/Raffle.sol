@@ -63,7 +63,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
 
     /* Events */
     event RequestedRaffleWinner(uint256 indexed requestId);
-    event RaffleEnter(address indexed player);
+    event RaffleEnter(address indexed player, uint256 indexed fee);
     event WinnerPicked(address indexed player);
 
     /* Functions */
@@ -97,7 +97,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
         s_players.push(payable(msg.sender));
         // Emit an event when we update a dynamic array or mapping
         // Named events with the function name reversed
-        emit RaffleEnter(msg.sender);
+        emit RaffleEnter(msg.sender, msg.value);
     }
 
     /**
