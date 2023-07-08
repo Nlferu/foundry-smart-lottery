@@ -61,6 +61,7 @@ contract RaffleTest is StdCheats, Test {
         // Arrange
         vm.prank(PLAYER);
         // Act / Assert
+        /// @dev We are checking what exact revert we are getting
         /// @dev Since "Error's" are also states like enum (type) we can call it as below:
         vm.expectRevert(Raffle.Raffle__SendMoreToEnterRaffle.selector);
         raffle.enterRaffle();
@@ -83,7 +84,7 @@ contract RaffleTest is StdCheats, Test {
         // Act / Assert
         /// @dev 1st = indexed param(check), 2nd = indexed param(check), 3rd = indexed param(check) (contracts allow only 3 indexed params)
         // 4th = checkData bool(check non-indexed params)
-        vm.expectEmit(true, true, false, true);
+        vm.expectEmit(true, true, false, true, address(raffle));
         emit RaffleEnter(PLAYER, raffleEntranceFee);
         raffle.enterRaffle{value: raffleEntranceFee}();
     }
@@ -99,6 +100,7 @@ contract RaffleTest is StdCheats, Test {
         raffle.performUpkeep("");
 
         // Act / Assert
+        /// @dev We are checking what exact revert we are getting
         vm.expectRevert(Raffle.Raffle__RaffleNotOpen.selector);
         vm.prank(PLAYER);
         raffle.enterRaffle{value: raffleEntranceFee}();
@@ -134,8 +136,13 @@ contract RaffleTest is StdCheats, Test {
         assert(upkeepNeeded == false);
     }
 
-    // Can you implement this?
-    function testCheckUpkeepReturnsFalseIfEnoughTimeHasntPassed() public {}
+    function testCheckUpkeepReturnsFalseIfEnoughTimeHasntPassed() public {
+        vm.prank(PLAYER);
+        raffle.enterRaffle{value: raffleEntranceFee}();
+        (bool upkeepNeeded, ) = raffle.checkUpkeep("");
+
+        assert(upkeepNeeded == false);
+    }
 
     function testCheckUpkeepReturnsTrueWhenParametersGood() public {
         // Arrange
@@ -155,16 +162,28 @@ contract RaffleTest is StdCheats, Test {
     // performUpkeep       //
     /////////////////////////
 
-    function testPerformUpkeepCanOnlyRunIfCheckUpkeepIsTrue() public {
+    function testPerformUpkeepCanOnlyRunIfCheckUpkeepIsTrueAndEmitsRequestId() public {
         // Arrange
+        bytes32 requestId;
+
         vm.prank(PLAYER);
         raffle.enterRaffle{value: raffleEntranceFee}();
         vm.warp(block.timestamp + automationUpdateInterval + 1);
         vm.roll(block.number + 1);
 
         // Act / Assert
-        // It doesnt revert
-        raffle.performUpkeep("");
+        vm.expectEmit(false, false, false, false, address(raffle));
+        // We do not care about actual requestId (it is 1 btw) we only check if it emits event, so we can confirm "performUpkeep" actually passed
+        emit RequestedRaffleWinner(uint256(requestId));
+
+        // Now we are checking what exact requestId have been emitted
+        vm.recordLogs();
+        raffle.performUpkeep(""); // emits requestId
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        requestId = entries[1].topics[1];
+
+        console.log("Emitted RequestId: ", uint256(requestId));
+        assert(uint256(requestId) > 0);
     }
 
     function testPerformUpkeepRevertsIfCheckUpkeepIsFalse() public {
@@ -172,12 +191,14 @@ contract RaffleTest is StdCheats, Test {
         uint256 currentBalance = 0;
         uint256 numPlayers = 0;
         Raffle.RaffleState rState = raffle.getRaffleState();
+
         // Act / Assert
+        /// @dev We are checking what exact revert we are getting
         vm.expectRevert(abi.encodeWithSelector(Raffle.Raffle__UpkeepNotNeeded.selector, currentBalance, numPlayers, rState));
         raffle.performUpkeep("");
     }
 
-    function testPerformUpkeepUpdatesRaffleStateAndEmitsRequestId() public {
+    function testPerformUpkeepUpdatesRaffleState() public {
         // Arrange
         vm.prank(PLAYER);
         raffle.enterRaffle{value: raffleEntranceFee}();
@@ -185,15 +206,11 @@ contract RaffleTest is StdCheats, Test {
         vm.roll(block.number + 1);
 
         // Act
-        vm.recordLogs();
-        raffle.performUpkeep(""); // emits requestId
-        Vm.Log[] memory entries = vm.getRecordedLogs();
-        bytes32 requestId = entries[1].topics[1];
+        raffle.performUpkeep("");
 
         // Assert
         Raffle.RaffleState raffleState = raffle.getRaffleState();
-        // requestId = raffle.getLastRequestId();
-        assert(uint256(requestId) > 0);
+
         assert(uint(raffleState) == 1); // 0 = open, 1 = calculating
     }
 
@@ -224,12 +241,12 @@ contract RaffleTest is StdCheats, Test {
         VRFCoordinatorV2Mock(vrfCoordinatorV2).fulfillRandomWords(0, address(raffle));
 
         vm.expectRevert("nonexistent request");
-
         VRFCoordinatorV2Mock(vrfCoordinatorV2).fulfillRandomWords(1, address(raffle));
     }
 
     function testFulfillRandomWordsPicksAWinnerResetsAndSendsMoney() public raffleEntered skipFork {
         address expectedWinner = address(1);
+        console.log("Player: ", expectedWinner);
 
         // Arrange
         uint256 additionalEntrances = 3;
@@ -250,6 +267,8 @@ contract RaffleTest is StdCheats, Test {
         Vm.Log[] memory entries = vm.getRecordedLogs();
         bytes32 requestId = entries[1].topics[1]; // get the requestId from the logs
 
+        vm.expectEmit(true, false, false, false, address(raffle));
+        emit WinnerPicked(expectedWinner);
         VRFCoordinatorV2Mock(vrfCoordinatorV2).fulfillRandomWords(uint256(requestId), address(raffle));
 
         // Assert
@@ -259,6 +278,7 @@ contract RaffleTest is StdCheats, Test {
         uint256 endingTimeStamp = raffle.getLastTimeStamp();
         uint256 prize = raffleEntranceFee * (additionalEntrances + 1);
 
+        console.log("Recent Winner: ", recentWinner);
         assert(recentWinner == expectedWinner);
         assert(uint256(raffleState) == 0);
         assert(winnerBalance == startingBalance + prize);

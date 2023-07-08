@@ -37,6 +37,14 @@ contract CreateSubscription is Script {
 }
 
 contract AddConsumer is Script {
+    function addConsumerUsingConfig(address mostRecentlyDeployed) public {
+        HelperConfig helperConfig = new HelperConfig();
+
+        (uint64 subId, , , , , address vrfCoordinatorV2, , uint256 deployerKey) = helperConfig.activeNetworkConfig();
+
+        addConsumer(mostRecentlyDeployed, vrfCoordinatorV2, subId, deployerKey);
+    }
+
     function addConsumer(address contractToAddToVrf, address vrfCoordinator, uint64 subId, uint256 deployerKey) public {
         console.log("Adding consumer contract: ", contractToAddToVrf);
         console.log("Using vrfCoordinator: ", vrfCoordinator);
@@ -47,14 +55,6 @@ contract AddConsumer is Script {
         vm.stopBroadcast();
     }
 
-    function addConsumerUsingConfig(address mostRecentlyDeployed) public {
-        HelperConfig helperConfig = new HelperConfig();
-
-        (uint64 subId, , , , , address vrfCoordinatorV2, , uint256 deployerKey) = helperConfig.activeNetworkConfig();
-
-        addConsumer(mostRecentlyDeployed, vrfCoordinatorV2, subId, deployerKey);
-    }
-
     function run() external {
         address mostRecentlyDeployed = DevOpsTools.get_most_recent_deployment("Raffle", block.chainid);
 
@@ -63,6 +63,7 @@ contract AddConsumer is Script {
 }
 
 contract FundSubscription is Script {
+    /// @dev Below means we will transfer 3 LINK tokens
     uint96 public constant FUND_AMOUNT = 3 ether;
 
     function fundSubscriptionUsingConfig() public {
