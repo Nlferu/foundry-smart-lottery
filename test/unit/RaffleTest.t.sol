@@ -284,4 +284,42 @@ contract RaffleTest is StdCheats, Test {
         assert(winnerBalance == startingBalance + prize);
         assert(endingTimeStamp > startingTimeStamp);
     }
+
+    /// @dev Getters
+
+    function testGetNumWords() public {
+        uint256 numWords = raffle.getNumWords();
+
+        assertEq(numWords, 1);
+    }
+
+    function testGetRequestConfirmations() public {
+        uint256 requests = raffle.getRequestConfirmations();
+
+        assertEq(requests, 3);
+    }
+
+    function testGetInterval() public {
+        uint256 interval = raffle.getInterval();
+
+        assertEq(interval, 30);
+    }
+
+    function testGetEntranceFee() public {
+        uint256 fee = raffle.getEntranceFee();
+
+        assertEq(fee, raffleEntranceFee);
+    }
+
+    function testGetNumberOfPlayers() public {
+        uint256 players = raffle.getNumberOfPlayers();
+
+        assertEq(players, 0);
+
+        vm.prank(PLAYER);
+        raffle.enterRaffle{value: raffleEntranceFee}();
+        players = raffle.getNumberOfPlayers();
+
+        assertEq(players, 1);
+    }
 }
