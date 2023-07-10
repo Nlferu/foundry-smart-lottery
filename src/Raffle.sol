@@ -65,6 +65,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
     event RequestedRaffleWinner(uint256 indexed requestId);
     event RaffleEnter(address indexed player, uint256 indexed fee);
     event WinnerPicked(address indexed player);
+    event TestEvent(string someString, uint256 indexed someNumber, address indexed someAddress, string someOther);
 
     /* Functions */
     constructor(
@@ -131,8 +132,9 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
 
         s_raffleState = RaffleState.CALCULATING;
         uint256 requestId = i_vrfCoordinator.requestRandomWords(i_gasLane, i_subscriptionId, REQUEST_CONFIRMATIONS, i_callbackGasLimit, NUM_WORDS);
-        // Quiz... is this redundant?
+        // This is emitted by VRFCoordinatorV2
         emit RequestedRaffleWinner(requestId);
+        emit TestEvent("lama", 32, msg.sender, "rok");
     }
 
     /**

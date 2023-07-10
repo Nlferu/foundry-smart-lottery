@@ -16,6 +16,7 @@ contract RaffleTest is StdCheats, Test {
     event RequestedRaffleWinner(uint256 indexed requestId);
     event RaffleEnter(address indexed player, uint256 indexed fee);
     event WinnerPicked(address indexed player);
+    event TestEvent(string someString, uint256 indexed someNumber, address indexed someAddress, string someOther);
 
     Raffle public raffle;
     HelperConfig public helperConfig;
@@ -165,6 +166,10 @@ contract RaffleTest is StdCheats, Test {
     function testPerformUpkeepCanOnlyRunIfCheckUpkeepIsTrueAndEmitsRequestId() public {
         // Arrange
         bytes32 requestId;
+        string memory someString;
+        bytes32 someNumber;
+        address someAddress;
+        string memory someOther;
 
         vm.prank(PLAYER);
         raffle.enterRaffle{value: raffleEntranceFee}();
@@ -175,15 +180,36 @@ contract RaffleTest is StdCheats, Test {
         vm.expectEmit(false, false, false, false, address(raffle));
         // We do not care about actual requestId (it is 1 btw) we only check if it emits event, so we can confirm "performUpkeep" actually passed
         emit RequestedRaffleWinner(uint256(requestId));
+        emit TestEvent(someString, uint256(someNumber), someAddress, someOther);
 
         // Now we are checking what exact requestId have been emitted
+        // below `vm.recordLogs()` is telling VM to start recording all emitted events. We can access them via `vm.getRecordedLogs()`
         vm.recordLogs();
         raffle.performUpkeep(""); // emits requestId
         Vm.Log[] memory entries = vm.getRecordedLogs();
+        /// @dev Index of is: `event = entries[x]` while topics[0] = whole emit, so in this case `emit RequestedRaffleWinner(requestId);`, while topics[1] = requestId
+        // topics[2] -> this will give you second emitted value etc.
+        // WE CAN ONLY READ "INDEXED" PARAMETERS OR STRINGS
         requestId = entries[1].topics[1];
 
+        // Getting Emit from VRFCoordinatorV2
+        bytes32 subId = entries[0].topics[2];
+
+        console.log("VRF Emit: ", uint256(subId));
         console.log("Emitted RequestId: ", uint256(requestId));
+
         assert(uint256(requestId) > 0);
+
+        /// @dev Checking Test Event
+        someString = abi.decode(entries[2].data, (string));
+        someNumber = entries[2].topics[1];
+        someAddress = address(uint160(uint256(entries[2].topics[2])));
+        someOther = abi.decode(entries[2].data, (string));
+
+        console.log("String: ", someString);
+        console.log("Number: ", uint256(someNumber));
+        console.log("Address: ", someAddress, "msg.sender from Raffle.sol will be address(this) here: ", address(this));
+        console.log("Other String: ", someOther);
     }
 
     function testPerformUpkeepRevertsIfCheckUpkeepIsFalse() public {
