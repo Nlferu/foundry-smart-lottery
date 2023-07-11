@@ -15,8 +15,8 @@ contract RaffleTest is StdCheats, Test {
     /* Errors */
     event RequestedRaffleWinner(uint256 indexed requestId);
     event RaffleEnter(address indexed player, uint256 indexed fee);
-    event WinnerPicked(address indexed player);
-    event TestEvent(string someString, uint256 indexed someNumber, address indexed someAddress, string someOther);
+    event WinnerPicked(address indexed winner);
+    event TestEvent(string someString, uint256 indexed someNumber, address indexed someAddress, string someOtherString);
 
     Raffle public raffle;
     HelperConfig public helperConfig;
@@ -169,7 +169,7 @@ contract RaffleTest is StdCheats, Test {
         string memory someString;
         bytes32 someNumber;
         address someAddress;
-        string memory someOther;
+        string memory someOtherString;
 
         vm.prank(PLAYER);
         raffle.enterRaffle{value: raffleEntranceFee}();
@@ -180,7 +180,8 @@ contract RaffleTest is StdCheats, Test {
         vm.expectEmit(false, false, false, false, address(raffle));
         // We do not care about actual requestId (it is 1 btw) we only check if it emits event, so we can confirm "performUpkeep" actually passed
         emit RequestedRaffleWinner(uint256(requestId));
-        emit TestEvent(someString, uint256(someNumber), someAddress, someOther);
+        vm.expectEmit(false, false, false, false, address(raffle));
+        emit TestEvent(someString, uint256(someNumber), someAddress, someOtherString);
 
         // Now we are checking what exact requestId have been emitted
         // below `vm.recordLogs()` is telling VM to start recording all emitted events. We can access them via `vm.getRecordedLogs()`
@@ -201,15 +202,18 @@ contract RaffleTest is StdCheats, Test {
         assert(uint256(requestId) > 0);
 
         /// @dev Checking Test Event
+        // Mapping unindexed data...
+        (string memory s1, string memory s2) = abi.decode(entries[2].data, (string, string));
+
         someString = abi.decode(entries[2].data, (string));
         someNumber = entries[2].topics[1];
         someAddress = address(uint160(uint256(entries[2].topics[2])));
-        someOther = abi.decode(entries[2].data, (string));
+        someOtherString = s2;
 
-        console.log("String: ", someString);
+        console.log("String: ", someString, "And", s1);
         console.log("Number: ", uint256(someNumber));
         console.log("Address: ", someAddress, "msg.sender from Raffle.sol will be address(this) here: ", address(this));
-        console.log("Other String: ", someOther);
+        console.log("Other String: ", someOtherString);
     }
 
     function testPerformUpkeepRevertsIfCheckUpkeepIsFalse() public {
@@ -259,20 +263,19 @@ contract RaffleTest is StdCheats, Test {
         _;
     }
 
-    function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep() public raffleEntered skipFork {
-        // Arrange
-        // Act / Assert
+    /// @dev Fuzz Testing -> Foundry is generating random inputs and run a looot of times testing if output is the same
+    function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep(uint256 randomRequestId) public raffleEntered skipFork {
+        // Arrange / Act / Assert
+        /// @dev This error message comes from VRFCoordinatorV2
         vm.expectRevert("nonexistent request");
         // vm.mockCall could be used here...
-        VRFCoordinatorV2Mock(vrfCoordinatorV2).fulfillRandomWords(0, address(raffle));
-
-        vm.expectRevert("nonexistent request");
-        VRFCoordinatorV2Mock(vrfCoordinatorV2).fulfillRandomWords(1, address(raffle));
+        /// @dev Only Chainlink node can call fulfillRandomWords, so we are pretending here to be this Chainlink node
+        VRFCoordinatorV2Mock(vrfCoordinatorV2).fulfillRandomWords(randomRequestId, address(raffle));
     }
 
     function testFulfillRandomWordsPicksAWinnerResetsAndSendsMoney() public raffleEntered skipFork {
+        address winner;
         address expectedWinner = address(1);
-        console.log("Player: ", expectedWinner);
 
         // Arrange
         uint256 additionalEntrances = 3;
@@ -280,22 +283,28 @@ contract RaffleTest is StdCheats, Test {
 
         for (uint256 i = startingIndex; i < startingIndex + additionalEntrances; i++) {
             address player = address(uint160(i));
-            hoax(player, 1 ether); // deal 1 eth to the player
+            hoax(player, 1 ether);
             raffle.enterRaffle{value: raffleEntranceFee}();
         }
 
         uint256 startingTimeStamp = raffle.getLastTimeStamp();
         uint256 startingBalance = expectedWinner.balance;
+        console.log("Starting Balance: ", startingBalance);
 
         // Act
         vm.recordLogs();
-        raffle.performUpkeep(""); // emits requestId
+        raffle.performUpkeep(""); // emits requestId and winner
         Vm.Log[] memory entries = vm.getRecordedLogs();
         bytes32 requestId = entries[1].topics[1]; // get the requestId from the logs
 
         vm.expectEmit(true, false, false, false, address(raffle));
         emit WinnerPicked(expectedWinner);
-        VRFCoordinatorV2Mock(vrfCoordinatorV2).fulfillRandomWords(uint256(requestId), address(raffle));
+
+        vm.recordLogs();
+        VRFCoordinatorV2Mock(vrfCoordinatorV2).fulfillRandomWords(uint256(requestId), address(raffle)); // emits requestId and winner
+        Vm.Log[] memory secEntries = vm.getRecordedLogs();
+        winner = address(uint160(uint256(secEntries[1].topics[1]))); // get recent winner from logs
+        console.log("Winner: ", winner);
 
         // Assert
         address recentWinner = raffle.getRecentWinner();
@@ -305,10 +314,11 @@ contract RaffleTest is StdCheats, Test {
         uint256 prize = raffleEntranceFee * (additionalEntrances + 1);
 
         console.log("Recent Winner: ", recentWinner);
-        assert(recentWinner == expectedWinner);
+        assert(recentWinner == winner);
         assert(uint256(raffleState) == 0);
         assert(winnerBalance == startingBalance + prize);
         assert(endingTimeStamp > startingTimeStamp);
+        assert(raffle.getNumberOfPlayers() == 0);
     }
 
     /// @dev Getters
