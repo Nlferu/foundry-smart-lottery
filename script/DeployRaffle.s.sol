@@ -7,7 +7,7 @@ import {Raffle} from "../src/Raffle.sol";
 import {AddConsumer, CreateSubscription, FundSubscription} from "./Interactions.s.sol";
 
 contract DeployRaffle is Script {
-    function run() external returns (Raffle, HelperConfig) {
+    function run() external returns (Raffle, HelperConfig, AddConsumer) {
         HelperConfig helperConfig = new HelperConfig(); // This comes with our mocks!
         AddConsumer addConsumer = new AddConsumer();
 
@@ -36,6 +36,7 @@ contract DeployRaffle is Script {
 
         // We already have a broadcast in here
         addConsumer.addConsumer(address(raffle), vrfCoordinatorV2, subscriptionId, deployerKey);
-        return (raffle, helperConfig);
+
+        return (raffle, helperConfig, addConsumer);
     }
 }

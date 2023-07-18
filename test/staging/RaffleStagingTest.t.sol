@@ -32,7 +32,7 @@ contract RaffleTest is StdCheats, Test {
 
     function setUp() external {
         DeployRaffle deployer = new DeployRaffle();
-        (raffle, helperConfig) = deployer.run();
+        (raffle, helperConfig, ) = deployer.run();
         vm.deal(PLAYER, STARTING_USER_BALANCE);
 
         (

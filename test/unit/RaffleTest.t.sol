@@ -33,7 +33,7 @@ contract RaffleTest is StdCheats, Test {
 
     function setUp() external {
         DeployRaffle deployer = new DeployRaffle();
-        (raffle, helperConfig) = deployer.run();
+        (raffle, helperConfig, ) = deployer.run();
         deal(PLAYER, STARTING_USER_BALANCE);
 
         (
@@ -256,6 +256,7 @@ contract RaffleTest is StdCheats, Test {
         _;
     }
 
+    // Skipping tests because of differences between VRFMock and VRF real contracts (Those tests will be included in "staging" folder)
     modifier skipFork() {
         if (block.chainid != 31337) {
             return;
