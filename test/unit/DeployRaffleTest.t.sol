@@ -29,8 +29,8 @@ contract DeployRaffleTest is StdCheats, Test {
         (uint64 subscriptionId, , , , , , , ) = helperConfig.activeNetworkConfig();
 
         if (subscriptionId == 0) {
-            assert(address(createSubscription) == 0x0000000000000000000000000000000000000000); // This should be: 0xffdcC297C11a15F778e155c20c0b7Ab1D26f5561 (invisible)
-            assert(address(fundSubscription) == 0x0000000000000000000000000000000000000000); // 0x7C5f18184dbdb4fE367fC3B38AaA576C6B86f2Af
+            assert(address(createSubscription) == 0x0000000000000000000000000000000000000000); // This should be: 0xffdcC297C11a15F778e155c20c0b7Ab1D26f5561 (it's invisible)
+            assert(address(fundSubscription) == 0x0000000000000000000000000000000000000000); // This should be: 0x7C5f18184dbdb4fE367fC3B38AaA576C6B86f2Af (it's invisible)
         }
 
         subscriptionId = 1;
