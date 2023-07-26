@@ -27,6 +27,8 @@ import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interface
 import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterface.sol";
 
+// ⭐️ DEBUGGING -> import {console} from "forge-std/console.sol;"
+
 /**@title A sample Raffle Contract
  * @author Patryk Wu
  * @notice This contract is for creating a sample raffle contract
